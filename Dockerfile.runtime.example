@@ -1,0 +1,25 @@
+# Example runtime Dockerfile for XAF Blazor app based on this base image
+FROM aelmen/xafblazoraspnet9 as base
+
+# Set build-time arguments for DevExpress NuGet authentication
+ARG DEVEXPRESS_NUGET_API_KEY
+
+# Set environment variables for locale and timezone (can be overridden at runtime)
+ENV LOCALE=sv_SE.UTF-8
+ENV TZ=Europe/Stockholm
+
+# Install any additional runtime dependencies if needed
+# RUN apt-get update && apt-get install -y ...
+
+# Copy your published app
+COPY ./publish /app
+WORKDIR /app
+
+# Example: Restore and publish with DevExpress NuGet feed
+# (in your CI/CD pipeline or build stage, use the API key)
+# RUN dotnet nuget add source "https://nuget.devexpress.com/api" -n DevExpress --username=your_email --password=$DEVEXPRESS_NUGET_API_KEY --store-password-in-clear-text
+# RUN dotnet restore --interactive
+# RUN dotnet publish YourApp.csproj -c Release -o /app/publish
+
+# Start the application
+ENTRYPOINT ["dotnet", "YourApp.dll"]

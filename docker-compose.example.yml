@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  xafblazor:
+    image: aelmen/xafblazoraspnet9
+    env_file:
+      - .env
+    ports:
+      - "8080:80"
+    environment:
+      # Optionally override or add more environment variables here
+      # DEVEXPRESS_NUGET_API_KEY: ${DEVEXPRESS_NUGET_API_KEY}

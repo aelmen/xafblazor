@@ -1,0 +1,56 @@
+# See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
+
+# --- Base image with fonts, locales, and all XAF Blazor dependencies ---
+FROM aelmen/xafblazoraspnet9 AS base
+
+# Use a non-root user for security
+USER app
+WORKDIR /app
+
+# Expose default ports for HTTP and HTTPS
+EXPOSE 8080
+EXPOSE 8081
+
+# --- Build stage: restore, build, and publish your app ---
+FROM aelmen/xafblazoraspnet9 AS build
+
+# Accept build configuration as argument
+ARG BUILD_CONFIGURATION=Release
+
+# Add DevExpress NuGet feed (API key should be provided via environment variable or build arg)
+ARG DEVEXPRESS_NUGET_API_KEY
+RUN dotnet nuget add source https://nuget.devexpress.com/api -n devexpress-nuget --username=your_email --password=$DEVEXPRESS_NUGET_API_KEY --store-password-in-clear-text
+
+WORKDIR /src
+COPY ["Server.csproj", "."]
+RUN dotnet restore "./Server.csproj"
+COPY . .
+WORKDIR "/src/."
+RUN dotnet build "./Server.csproj" -c $BUILD_CONFIGURATION -o /app/build
+
+# --- Publish stage ---
+FROM build AS publish
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish "./Server.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+
+# --- Final runtime image ---
+FROM base AS final
+WORKDIR /app
+
+# Copy published app
+COPY --from=publish /app/publish .
+
+# Environment variables for runtime configuration
+# These can be set in your docker-compose.yml or .env file
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV LOCALE=sv_SE.UTF-8
+ENV TZ=Europe/Stockholm
+# Example for connection string and DevExpress license key
+ENV ConnectionStrings__DefaultConnection="Server=host.docker.internal;Database=MyDb;User Id=sa;Password=your_password;"
+ENV DEVEXPRESS_NUGET_API_KEY=""
+
+# Optionally, add more ENV for SMTP, API keys, etc.
+# ENV SMTP__Host="smtp.example.com"
+# ENV API__Key="your_api_key"
+
+ENTRYPOINT ["dotnet", "Server.dll"]
